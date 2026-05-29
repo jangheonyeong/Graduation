@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>수학 문제풀이</title>
+
+    <link rel="stylesheet" href="./chatbotStyles.css" />
+    <script type="module" src="/src/chatbotMain.js"></script>
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <header class="top-bar">
+        <button id="historyButton" class="history-button" type="button">
+          기록 보기
+        </button>
+
+        <div class="student-info">
+          <span>학생</span>
+          <strong id="studentNicknameText">-</strong>
+        </div>
+      </header>
+
+      <section class="problem-section">
+        <p class="section-label">Problem 1</p>
+        <h1 id="problemText">문제를 불러오는 중입니다.</h1>
+      </section>
+
+      <main class="workspace">
+        <section class="solution-panel">
+          <div class="panel-header">
+            <p class="section-label">Student Solution</p>
+            <h2>본인 풀이 입력</h2>
+          </div>
+
+          <form id="solutionForm" class="solution-form">
+            <textarea
+              id="studentInput"
+              placeholder="여기에 자신의 풀이 과정과 생각을 입력하세요."
+              required
+            ></textarea>
+
+            <p id="submitMessage" class="submit-message"></p>
+
+            <button id="submitButton" class="submit-button" type="submit">
+              풀이 제출하기
+            </button>
+          </form>
+        </section>
+
+        <section class="probability-panel">
+          <div class="panel-header">
+            <p class="section-label">Probability of Correctness</p>
+            <h2>정답 가능성</h2>
+          </div>
+
+          <div id="probabilityGauge" class="probability-gauge">
+            <div class="gauge-inner">
+              <span id="probabilityValue">0</span>
+              <small>/ 100</small>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside id="historyDrawer" class="history-drawer" aria-hidden="true" insert>
+      <div class="history-header">
+        <div>
+          <p class="section-label">History</p>
+          <h2>풀이 기록</h2>
+        </div>
+
+        <button id="closeHistoryButton" class="close-history-button" type="button">
+          닫기
+        </button>
+      </div>
+
+      <div id="historyList" class="history-list">
+        <p class="empty-history">아직 저장된 풀이 기록이 없습니다.</p>
+      </div>
+    </aside>
+
+    <div id="drawerOverlay" class="drawer-overlay"></div>
+  </body>
+</html>

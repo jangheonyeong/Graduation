@@ -1,18 +1,25 @@
+import { initializeApp, getApps } from "firebase/app";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  serverTimestamp
+} from "firebase/firestore";
+
+import { firebaseConfig } from "./firebaseConfig.js";
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
+
 const loginForm = document.querySelector("#studentLoginForm");
 const loginButton = document.querySelector("#loginButton");
 const loginMessage = document.querySelector("#loginMessage");
 
 const classNumberInput = document.querySelector("#classNumber");
 const studentNumberInput = document.querySelector("#studentNumber");
-const generatedNicknameElement = document.querySelector("#generatedNickname");
 
 const STORAGE_KEY = "mathTutoringStudentSession";
-
-// 이후 실제 문제풀이 화면 파일명이 정해지면 수정하세요.
-const NEXT_PAGE_URL = "./tutor.html";
-
-// 아직 다음 페이지가 없으면 false로 두세요.
-const REDIRECT_AFTER_LOGIN = false;
+const NEXT_PAGE_URL = "./chatbot.html";
 
 function showMessage(message, type = "info") {
   loginMessage.textContent = message;
@@ -21,60 +28,60 @@ function showMessage(message, type = "info") {
 
 function setLoading(isLoading) {
   loginButton.disabled = isLoading;
-  loginButton.textContent = isLoading ? "로그인 중..." : "로그인하고 시작하기";
+  loginButton.textContent = isLoading ? "저장 중..." : "로그인하고 시작하기";
 }
 
-function sanitizePositiveInteger(value) {
-  const trimmed = String(value).trim();
+function getPositiveInteger(value) {
+  const trimmedValue = String(value).trim();
 
-  if (!trimmed) return "";
+  if (!trimmedValue) return "";
 
-  const numericValue = Number(trimmed);
+  const numberValue = Number(trimmedValue);
 
-  if (!Number.isInteger(numericValue) || numericValue < 1) {
-    return "";
-  }
+  if (!Number.isInteger(numberValue) || numberValue < 1) return "";
 
-  return String(numericValue);
+  return String(numberValue);
 }
 
-function buildStudentNickname(classNumber, studentNumber) {
-  if (!classNumber || !studentNumber) {
-    return "math반-번호";
-  }
-
+function createStudentNickname(classNumber, studentNumber) {
   return `math${classNumber}-${studentNumber}`;
 }
 
-function updateGeneratedNickname() {
-  const classNumber = sanitizePositiveInteger(classNumberInput.value);
-  const studentNumber = sanitizePositiveInteger(studentNumberInput.value);
+function createStudentSession(classNumber, studentNumber) {
+  const studentNickname = createStudentNickname(classNumber, studentNumber);
 
-  const nickname = buildStudentNickname(classNumber, studentNumber);
-  generatedNicknameElement.textContent = nickname;
-}
-
-function createStudentSession({ classNumber, studentNumber, studentNickname }) {
   return {
-    classNumber,
-    studentNumber,
+    classNumber: Number(classNumber),
+    studentNumber: Number(studentNumber),
     studentNickname,
-    loginAt: new Date().toISOString(),
-    sessionId: crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}`
+    loginAt: new Date().toISOString()
   };
 }
 
-function saveStudentSession(session) {
+async function saveStudentToFirestore(session) {
+  const studentDocRef = doc(db, "student", session.studentNickname);
+
+  await setDoc(
+    studentDocRef,
+    {
+      studentNickname: session.studentNickname,
+      classNumber: session.classNumber,
+      studentNumber: session.studentNumber,
+      lastLoginAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+function saveStudentSessionToLocalStorage(session) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
 
 function restorePreviousSession() {
   const savedSession = localStorage.getItem(STORAGE_KEY);
 
-  if (!savedSession) {
-    updateGeneratedNickname();
-    return;
-  }
+  if (!savedSession) return;
 
   try {
     const session = JSON.parse(savedSession);
@@ -86,61 +93,56 @@ function restorePreviousSession() {
     if (session.studentNumber) {
       studentNumberInput.value = session.studentNumber;
     }
-
-    updateGeneratedNickname();
   } catch (error) {
     localStorage.removeItem(STORAGE_KEY);
-    updateGeneratedNickname();
   }
 }
 
-function handleLoginSubmit(event) {
+async function handleLoginSubmit(event) {
   event.preventDefault();
 
-  const classNumber = sanitizePositiveInteger(classNumberInput.value);
-  const studentNumber = sanitizePositiveInteger(studentNumberInput.value);
+  const classNumber = getPositiveInteger(classNumberInput.value);
+  const studentNumber = getPositiveInteger(studentNumberInput.value);
 
   showMessage("");
 
   if (!classNumber) {
-    showMessage("반을 올바르게 입력해 주세요.", "error");
+    showMessage("반을 숫자로 입력해 주세요.", "error");
     classNumberInput.focus();
     return;
   }
 
   if (!studentNumber) {
-    showMessage("번호를 올바르게 입력해 주세요.", "error");
+    showMessage("번호를 숫자로 입력해 주세요.", "error");
     studentNumberInput.focus();
     return;
   }
 
-  const studentNickname = buildStudentNickname(classNumber, studentNumber);
+  const studentSession = createStudentSession(classNumber, studentNumber);
 
   setLoading(true);
 
-  const studentSession = createStudentSession({
-    classNumber,
-    studentNumber,
-    studentNickname
-  });
+  try {
+    await saveStudentToFirestore(studentSession);
+    saveStudentSessionToLocalStorage(studentSession);
 
-  saveStudentSession(studentSession);
+    showMessage("로그인이 완료되었습니다.", "success");
 
-  showMessage(`로그인이 완료되었습니다. 닉네임: ${studentNickname}`, "success");
-
-  console.log("Student session saved:", studentSession);
-
-  setTimeout(() => {
-    setLoading(false);
-
-    if (REDIRECT_AFTER_LOGIN) {
+    setTimeout(() => {
       window.location.href = NEXT_PAGE_URL;
+    }, 300);
+  } catch (error) {
+    console.error("Firestore 저장 실패:", error);
+
+    if (error.code === "permission-denied") {
+      showMessage("Firestore 권한 문제입니다. 규칙을 확인해 주세요.", "error");
+    } else {
+      showMessage(`저장 실패: ${error.message}`, "error");
     }
-  }, 700);
+  } finally {
+    setLoading(false);
+  }
 }
 
-classNumberInput.addEventListener("input", updateGeneratedNickname);
-studentNumberInput.addEventListener("input", updateGeneratedNickname);
 loginForm.addEventListener("submit", handleLoginSubmit);
-
 restorePreviousSession();

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>수학 문제풀이 튜터링 시스템</title>
+
+    <link rel="stylesheet" href="./indexStyles.css" />
+    <script type="module" src="./scr/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="login-page">
+      <section class="intro-panel" aria-label="시스템 소개">
+        <div class="intro-badge">Mathematics Tutoring System</div>
+
+        <h1>
+          정답 가능성과 함께하는<br />
+          수학 문제풀이 학습
+        </h1>
+
+        <p class="intro-text">
+          학생의 풀이 과정에 따라 정답 가능성이 제시되는
+          대화형 수학 문제풀이 시스템입니다.
+        </p>
+
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">01</span>
+            <div>
+              <strong>풀이 과정 입력</strong>
+              <p>학생은 자신의 생각과 풀이 과정을 자연어로 입력합니다.</p>
+            </div>
+          </div>
+
+          <div class="feature-item">
+            <span class="feature-icon">02</span>
+            <div>
+              <strong>정답 가능성 확인</strong>
+              <p>각 입력 이후 현재 풀이 상태에 대한 수치 정보가 제공됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="login-card" aria-label="학생 로그인">
+        <div class="card-header">
+          <p class="eyebrow">Student Login</p>
+          <h2>학생 로그인</h2>
+          <p>
+            반과 번호를 입력하면 학생 닉네임이 자동으로 생성됩니다.
+          </p>
+        </div>
+
+        <form id="studentLoginForm" class="login-form" novalidate>
+          <div class="form-group">
+            <label for="classNumber">반</label>
+            <input
+              id="classNumber"
+              name="classNumber"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="예: 7"
+              required
+            />
+            <small>숫자로 반을 입력해 주세요.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="studentNumber">번호</label>
+            <input
+              id="studentNumber"
+              name="studentNumber"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="예: 1"
+              required
+            />
+            <small>숫자로 번호를 입력해 주세요.</small>
+          </div>
+
+          <div class="generated-nickname-box">
+            <span class="generated-label">자동 생성 닉네임</span>
+            <p id="generatedNickname" class="generated-nickname">
+              math반-번호
+            </p>
+          </div>
+
+          <p id="loginMessage" class="login-message" aria-live="polite"></p>
+
+          <button id="loginButton" class="login-button" type="submit">
+            로그인하고 시작하기
+          </button>
+        </form>
+
+        <p class="help-text">
+          로그인 시 학생 닉네임은 자동으로 생성되며, 이후 학습 기록 저장에 사용됩니다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

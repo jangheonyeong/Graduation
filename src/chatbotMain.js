@@ -43,7 +43,9 @@ let currentHistoryCount = 0;
 function getStudentSession() {
   const savedSession = localStorage.getItem(STORAGE_KEY);
 
-  if (!savedSession) return null;
+  if (!savedSession) {
+    return null;
+  }
 
   try {
     return JSON.parse(savedSession);
@@ -64,14 +66,14 @@ function setSubmitting(isSubmitting) {
 }
 
 function updateProbabilityUI(result) {
-  const probabilityPercent = result.probabilityPercent;
+  const probabilityPercent = Number(result.probabilityPercent ?? 0);
 
   probabilityGauge.style.setProperty("--probability-fill", `${probabilityPercent}%`);
   probabilityValue.textContent = String(probabilityPercent);
 }
 
 async function requestProbabilityFromOpenAI(studentInputText) {
-  const response = await fetch("/api/evaluate-probability", {
+  const response = await fetch("/.netlify/functions/evaluate-probability", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -139,11 +141,15 @@ async function saveConversationLog({ studentInputText, probabilityResult }) {
 }
 
 function formatDateTime(value) {
-  if (!value) return "";
+  if (!value) {
+    return "";
+  }
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "";
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
 
   return date.toLocaleString("ko-KR", {
     month: "2-digit",

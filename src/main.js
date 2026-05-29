@@ -34,11 +34,15 @@ function setLoading(isLoading) {
 function getPositiveInteger(value) {
   const trimmedValue = String(value).trim();
 
-  if (!trimmedValue) return "";
+  if (!trimmedValue) {
+    return "";
+  }
 
   const numberValue = Number(trimmedValue);
 
-  if (!Number.isInteger(numberValue) || numberValue < 1) return "";
+  if (!Number.isInteger(numberValue) || numberValue < 1) {
+    return "";
+  }
 
   return String(numberValue);
 }
@@ -78,24 +82,13 @@ function saveStudentSessionToLocalStorage(session) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
 
-function restorePreviousSession() {
-  const savedSession = localStorage.getItem(STORAGE_KEY);
+function clearLoginInputs() {
+  loginForm.reset();
 
-  if (!savedSession) return;
-
-  try {
-    const session = JSON.parse(savedSession);
-
-    if (session.classNumber) {
-      classNumberInput.value = session.classNumber;
-    }
-
-    if (session.studentNumber) {
-      studentNumberInput.value = session.studentNumber;
-    }
-  } catch (error) {
-    localStorage.removeItem(STORAGE_KEY);
-  }
+  classNumberInput.value = "";
+  studentNumberInput.value = "";
+  loginMessage.textContent = "";
+  loginMessage.className = "login-message";
 }
 
 async function handleLoginSubmit(event) {
@@ -145,4 +138,6 @@ async function handleLoginSubmit(event) {
 }
 
 loginForm.addEventListener("submit", handleLoginSubmit);
-restorePreviousSession();
+
+window.addEventListener("DOMContentLoaded", clearLoginInputs);
+window.addEventListener("pageshow", clearLoginInputs);

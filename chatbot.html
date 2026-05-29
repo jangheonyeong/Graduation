@@ -29,7 +29,40 @@
 
       <main class="workspace">
         <section class="solution-panel">
-          <div class="panel-header">
+          <div class="confidence-box">
+            <div class="confidence-header">
+              <div>
+                <p class="section-label">Initial Confidence</p>
+                <h2>문제를 풀 자신감</h2>
+              </div>
+              <span id="confidenceStatus" class="confidence-status">입력 전</span>
+            </div>
+
+            <form id="confidenceForm" class="confidence-form" autocomplete="off">
+              <div class="confidence-input-row">
+                <input
+                  id="initialConfidenceInput"
+                  name="initialConfidenceInput"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="0~100"
+                  required
+                />
+                <span class="confidence-unit">/ 100</span>
+                <button id="confidenceButton" class="confidence-button" type="submit">
+                  저장
+                </button>
+              </div>
+
+              <p id="confidenceMessage" class="confidence-message">
+                문제를 풀기 전에 현재 자신감을 0~100 사이로 입력해 주세요.
+              </p>
+            </form>
+          </div>
+
+          <div class="panel-header solution-title">
             <p class="section-label">Student Solution</p>
             <h2>본인 풀이 입력</h2>
           </div>
@@ -41,12 +74,42 @@
               required
             ></textarea>
 
-            <p id="submitMessage" class="submit-message"></p>
-
             <button id="submitButton" class="submit-button" type="submit">
               풀이 제출하기
             </button>
+
+            <p id="submitMessage" class="submit-message"></p>
           </form>
+
+          <div class="answer-box">
+            <div class="answer-header">
+              <div>
+                <p class="section-label">Final Answer</p>
+                <h2>최종 정답</h2>
+              </div>
+              <span id="answerStatus" class="answer-status">입력 전</span>
+            </div>
+
+            <form id="answerForm" class="answer-form" autocomplete="off">
+              <div class="answer-input-row">
+                <input
+                  id="finalAnswerInput"
+                  name="finalAnswerInput"
+                  type="text"
+                  placeholder="최종 정답을 입력하세요."
+                  autocomplete="off"
+                  required
+                />
+                <button id="answerButton" class="answer-button" type="submit">
+                  저장
+                </button>
+              </div>
+
+              <p id="answerMessage" class="answer-message">
+                최종 정답은 한 번 저장하면 다시 수정할 수 없습니다.
+              </p>
+            </form>
+          </div>
         </section>
 
         <section class="probability-panel">
@@ -65,7 +128,7 @@
       </main>
     </div>
 
-    <aside id="historyDrawer" class="history-drawer" aria-hidden="true" insert>
+    <aside id="historyDrawer" class="history-drawer" aria-hidden="true" inert>
       <div class="history-header">
         <div>
           <p class="section-label">History</p>

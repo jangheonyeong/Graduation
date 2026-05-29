@@ -44,7 +44,8 @@ body {
 }
 
 button,
-textarea {
+textarea,
+input {
   font: inherit;
 }
 
@@ -128,7 +129,7 @@ textarea {
 .solution-panel,
 .probability-panel {
   min-height: 560px;
-  padding: 30px;
+  padding: 26px;
   border: 1px solid rgba(191, 219, 254, 0.95);
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.92);
@@ -140,24 +141,152 @@ textarea {
   flex-direction: column;
 }
 
-.panel-header h2 {
-  margin: 0 0 20px;
-  font-size: 1.6rem;
+.panel-header h2,
+.confidence-header h2,
+.answer-header h2 {
+  margin: 0;
+  font-size: 1.42rem;
   letter-spacing: -0.04em;
+}
+
+.solution-title {
+  margin-top: 20px;
+  margin-bottom: 14px;
+}
+
+.confidence-box {
+  padding: 14px 16px;
+  border: 1px solid var(--blue-100);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(255, 255, 255, 0.96));
+}
+
+.confidence-header,
+.answer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.confidence-status,
+.answer-status {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: var(--blue-800);
+  background: var(--blue-100);
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.confidence-status.locked,
+.answer-status.locked {
+  color: var(--success);
+  background: #dcfce7;
+}
+
+.confidence-form,
+.answer-form {
+  display: grid;
+  gap: 8px;
+}
+
+.confidence-input-row,
+.answer-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto 92px;
+  gap: 10px;
+  align-items: center;
+}
+
+.answer-input-row {
+  grid-template-columns: 1fr 92px;
+}
+
+.confidence-input-row input,
+.answer-input-row input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--blue-200);
+  border-radius: 14px;
+  color: var(--gray-900);
+  background: var(--white);
+  outline: none;
+}
+
+.confidence-input-row input:focus,
+.answer-input-row input:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
+}
+
+.confidence-input-row input:disabled,
+.answer-input-row input:disabled {
+  color: var(--gray-700);
+  background: var(--gray-100);
+  cursor: not-allowed;
+}
+
+.confidence-unit {
+  color: var(--gray-500);
+  font-weight: 900;
+}
+
+.confidence-button,
+.answer-button {
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.confidence-button:disabled,
+.answer-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.confidence-message,
+.answer-message {
+  min-height: 20px;
+  margin: 0;
+  color: var(--gray-500);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.confidence-message.error,
+.answer-message.error {
+  color: var(--danger);
+}
+
+.confidence-message.success,
+.answer-message.success {
+  color: var(--success);
 }
 
 .solution-form {
   display: grid;
-  gap: 18px;
+  gap: 6px;
 }
 
 textarea {
   width: 100%;
-  min-height: 360px;
+  min-height: 220px;
   resize: vertical;
-  padding: 20px;
+  padding: 18px;
   border: 1px solid var(--blue-200);
-  border-radius: 22px;
+  border-radius: 20px;
   outline: none;
   color: var(--gray-900);
   line-height: 1.7;
@@ -169,11 +298,31 @@ textarea:focus {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
 }
 
+.submit-button {
+  width: 100%;
+  height: 54px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 18px;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.submit-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .submit-message {
-  min-height: 24px;
-  margin: 0;
+  min-height: 18px;
+  margin: 4px 0 0;
   color: var(--gray-500);
   font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .submit-message.error {
@@ -185,7 +334,9 @@ textarea:focus {
 }
 
 .submit-button {
-  height: 58px;
+  width: 100%;
+  height: 56px;
+  margin-top: 10px;
   border: 0;
   border-radius: 18px;
   color: var(--white);
@@ -210,7 +361,6 @@ textarea:focus {
   place-items: center;
   background:
     conic-gradient(var(--blue-600) var(--probability-fill), var(--gray-200) 0);
-  transition: background 0.6s ease;
   box-shadow:
     inset 0 0 0 1px rgba(37, 99, 235, 0.12),
     0 18px 40px rgba(37, 99, 235, 0.18);
@@ -343,5 +493,17 @@ textarea:focus {
 
   .probability-gauge {
     margin-top: 30px;
+  }
+}
+
+@media (max-width: 560px) {
+  .confidence-input-row,
+  .answer-input-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .confidence-button,
+  .answer-button {
+    grid-column: 1 / -1;
   }
 }

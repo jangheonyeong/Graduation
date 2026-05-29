@@ -3,6 +3,7 @@ import {
   getFirestore,
   doc,
   getDoc,
+  setDoc,
   collection,
   addDoc,
   onSnapshot,
@@ -22,6 +23,18 @@ const PROBLEM_ID = "problem1";
 const studentNicknameText = document.querySelector("#studentNicknameText");
 const problemTextElement = document.querySelector("#problemText");
 
+const confidenceForm = document.querySelector("#confidenceForm");
+const initialConfidenceInput = document.querySelector("#initialConfidenceInput");
+const confidenceButton = document.querySelector("#confidenceButton");
+const confidenceMessage = document.querySelector("#confidenceMessage");
+const confidenceStatus = document.querySelector("#confidenceStatus");
+
+const answerForm = document.querySelector("#answerForm");
+const finalAnswerInput = document.querySelector("#finalAnswerInput");
+const answerButton = document.querySelector("#answerButton");
+const answerMessage = document.querySelector("#answerMessage");
+const answerStatus = document.querySelector("#answerStatus");
+
 const solutionForm = document.querySelector("#solutionForm");
 const studentInput = document.querySelector("#studentInput");
 const submitButton = document.querySelector("#submitButton");
@@ -39,6 +52,10 @@ const historyList = document.querySelector("#historyList");
 let currentStudentSession = null;
 let currentProblemText = "";
 let currentHistoryCount = 0;
+let currentInitialConfidencePercent = null;
+let currentFinalAnswerText = null;
+let currentDisplayedProbability = 0;
+let gaugeAnimationFrame = null;
 
 function getStudentSession() {
   const savedSession = localStorage.getItem(STORAGE_KEY);
@@ -60,16 +77,297 @@ function showSubmitMessage(message, type = "info") {
   submitMessage.className = `submit-message ${type}`;
 }
 
+function showConfidenceMessage(message, type = "info") {
+  confidenceMessage.textContent = message;
+  confidenceMessage.className = `confidence-message ${type}`;
+}
+
+function showAnswerMessage(message, type = "info") {
+  answerMessage.textContent = message;
+  answerMessage.className = `answer-message ${type}`;
+}
+
 function setSubmitting(isSubmitting) {
   submitButton.disabled = isSubmitting;
   submitButton.textContent = isSubmitting ? "정답 가능성 계산 중..." : "풀이 제출하기";
 }
 
-function updateProbabilityUI(result) {
-  const probabilityPercent = Number(result.probabilityPercent ?? 0);
+function setConfidenceSaving(isSaving) {
+  confidenceButton.disabled = isSaving;
+  confidenceButton.textContent = isSaving ? "저장 중..." : "저장";
+}
 
-  probabilityGauge.style.setProperty("--probability-fill", `${probabilityPercent}%`);
-  probabilityValue.textContent = String(probabilityPercent);
+function setAnswerSaving(isSaving) {
+  answerButton.disabled = isSaving;
+  answerButton.textContent = isSaving ? "저장 중..." : "저장";
+}
+
+function getConfidenceValue(value) {
+  const trimmedValue = String(value).trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const numberValue = Number(trimmedValue);
+
+  if (!Number.isInteger(numberValue) || numberValue < 0 || numberValue > 100) {
+    return null;
+  }
+
+  return numberValue;
+}
+
+function getFinalAnswerValue(value) {
+  const answerText = String(value).trim();
+
+  if (!answerText) {
+    return "";
+  }
+
+  return answerText;
+}
+
+function lockConfidenceInput(confidencePercent) {
+  currentInitialConfidencePercent = confidencePercent;
+
+  initialConfidenceInput.value = String(confidencePercent);
+  initialConfidenceInput.disabled = true;
+
+  confidenceButton.disabled = true;
+  confidenceButton.textContent = "저장 완료";
+
+  confidenceStatus.textContent = "잠김";
+  confidenceStatus.classList.add("locked");
+
+  showConfidenceMessage("자신감이 저장되었습니다. 이 값은 다시 수정할 수 없습니다.", "success");
+}
+
+function unlockConfidenceInput() {
+  currentInitialConfidencePercent = null;
+
+  initialConfidenceInput.disabled = false;
+  confidenceButton.disabled = false;
+  confidenceButton.textContent = "저장";
+
+  confidenceStatus.textContent = "입력 전";
+  confidenceStatus.classList.remove("locked");
+
+  showConfidenceMessage("문제를 풀기 전에 현재 자신감을 0~100 사이로 입력해 주세요.", "info");
+}
+
+function lockFinalAnswerInput(answerText) {
+  currentFinalAnswerText = answerText;
+
+  finalAnswerInput.value = answerText;
+  finalAnswerInput.disabled = true;
+
+  answerButton.disabled = true;
+  answerButton.textContent = "저장 완료";
+
+  answerStatus.textContent = "잠김";
+  answerStatus.classList.add("locked");
+
+  showAnswerMessage("최종 정답이 저장되었습니다. 이 값은 다시 수정할 수 없습니다.", "success");
+}
+
+function unlockFinalAnswerInput() {
+  currentFinalAnswerText = null;
+
+  finalAnswerInput.disabled = false;
+  answerButton.disabled = false;
+  answerButton.textContent = "저장";
+
+  answerStatus.textContent = "입력 전";
+  answerStatus.classList.remove("locked");
+
+  showAnswerMessage("최종 정답은 한 번 저장하면 다시 수정할 수 없습니다.", "info");
+}
+
+async function loadStudentProblemState() {
+  const studentDocRef = doc(db, "student", currentStudentSession.studentNickname);
+  const studentSnap = await getDoc(studentDocRef);
+
+  if (!studentSnap.exists()) {
+    unlockConfidenceInput();
+    unlockFinalAnswerInput();
+    return;
+  }
+
+  const studentData = studentSnap.data();
+
+  const savedConfidence =
+    studentData.initialConfidenceByProblem?.[PROBLEM_ID]?.confidencePercent;
+
+  const savedFinalAnswer =
+    studentData.finalAnswerByProblem?.[PROBLEM_ID]?.answerText;
+
+  if (Number.isInteger(savedConfidence) && savedConfidence >= 0 && savedConfidence <= 100) {
+    lockConfidenceInput(savedConfidence);
+  } else {
+    unlockConfidenceInput();
+  }
+
+  if (typeof savedFinalAnswer === "string" && savedFinalAnswer.trim()) {
+    lockFinalAnswerInput(savedFinalAnswer.trim());
+  } else {
+    unlockFinalAnswerInput();
+  }
+}
+
+async function saveInitialConfidence(confidencePercent) {
+  const studentDocRef = doc(db, "student", currentStudentSession.studentNickname);
+
+  await setDoc(
+    studentDocRef,
+    {
+      initialConfidenceByProblem: {
+        [PROBLEM_ID]: {
+          confidencePercent,
+          locked: true,
+          lockedAt: serverTimestamp(),
+          lockedAtLocal: new Date().toISOString()
+        }
+      },
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+async function saveFinalAnswer(answerText) {
+  const studentDocRef = doc(db, "student", currentStudentSession.studentNickname);
+
+  await setDoc(
+    studentDocRef,
+    {
+      finalAnswerByProblem: {
+        [PROBLEM_ID]: {
+          answerText,
+          locked: true,
+          lockedAt: serverTimestamp(),
+          lockedAtLocal: new Date().toISOString()
+        }
+      },
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+async function handleConfidenceSubmit(event) {
+  event.preventDefault();
+
+  if (currentInitialConfidencePercent !== null) {
+    showConfidenceMessage("이미 저장된 자신감은 수정할 수 없습니다.", "error");
+    return;
+  }
+
+  const confidencePercent = getConfidenceValue(initialConfidenceInput.value);
+
+  if (confidencePercent === null) {
+    showConfidenceMessage("자신감은 0~100 사이의 정수로 입력해 주세요.", "error");
+    initialConfidenceInput.focus();
+    return;
+  }
+
+  setConfidenceSaving(true);
+
+  try {
+    await saveInitialConfidence(confidencePercent);
+    lockConfidenceInput(confidencePercent);
+  } catch (error) {
+    console.error("자신감 저장 실패:", error);
+
+    if (error.code === "permission-denied") {
+      showConfidenceMessage("Firestore 권한 문제입니다. 규칙을 확인해 주세요.", "error");
+    } else {
+      showConfidenceMessage(`자신감 저장 실패: ${error.message}`, "error");
+    }
+
+    setConfidenceSaving(false);
+  }
+}
+
+async function handleAnswerSubmit(event) {
+  event.preventDefault();
+
+  if (currentFinalAnswerText !== null) {
+    showAnswerMessage("이미 저장된 최종 정답은 수정할 수 없습니다.", "error");
+    return;
+  }
+
+  const answerText = getFinalAnswerValue(finalAnswerInput.value);
+
+  if (!answerText) {
+    showAnswerMessage("최종 정답을 입력해 주세요.", "error");
+    finalAnswerInput.focus();
+    return;
+  }
+
+  setAnswerSaving(true);
+
+  try {
+    await saveFinalAnswer(answerText);
+    lockFinalAnswerInput(answerText);
+  } catch (error) {
+    console.error("최종 정답 저장 실패:", error);
+
+    if (error.code === "permission-denied") {
+      showAnswerMessage("Firestore 권한 문제입니다. 규칙을 확인해 주세요.", "error");
+    } else {
+      showAnswerMessage(`최종 정답 저장 실패: ${error.message}`, "error");
+    }
+
+    setAnswerSaving(false);
+  }
+}
+
+function setGaugeValue(value) {
+  const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+
+  probabilityGauge.style.setProperty("--probability-fill", `${safeValue}%`);
+  probabilityValue.textContent = String(safeValue);
+  currentDisplayedProbability = safeValue;
+}
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function animateProbabilityTo(targetValue) {
+  const target = Math.max(0, Math.min(100, Math.round(Number(targetValue) || 0)));
+  const start = currentDisplayedProbability;
+  const duration = 950;
+  const startTime = performance.now();
+
+  if (gaugeAnimationFrame) {
+    cancelAnimationFrame(gaugeAnimationFrame);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easedProgress = easeOutCubic(progress);
+    const currentValue = Math.round(start + (target - start) * easedProgress);
+
+    probabilityGauge.style.setProperty("--probability-fill", `${currentValue}%`);
+    probabilityValue.textContent = String(currentValue);
+
+    if (progress < 1) {
+      gaugeAnimationFrame = requestAnimationFrame(animate);
+      return;
+    }
+
+    currentDisplayedProbability = target;
+    gaugeAnimationFrame = null;
+  }
+
+  gaugeAnimationFrame = requestAnimationFrame(animate);
+}
+
+function updateProbabilityUI(result) {
+  animateProbabilityTo(result.probabilityPercent);
 }
 
 async function requestProbabilityFromOpenAI(studentInputText) {
@@ -81,14 +379,28 @@ async function requestProbabilityFromOpenAI(studentInputText) {
     body: JSON.stringify({
       problemId: PROBLEM_ID,
       problemText: currentProblemText,
-      studentInput: studentInputText
+      studentInput: studentInputText,
+      initialConfidencePercent: currentInitialConfidencePercent,
+      finalAnswerText: currentFinalAnswerText
     })
   });
 
-  const data = await response.json();
+  const responseText = await response.text();
+
+  let data = {};
+
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch (error) {
+    throw new Error(
+      `서버 응답을 JSON으로 읽지 못했습니다. 상태 코드: ${response.status}`
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || "정답 가능성 계산 요청에 실패했습니다.");
+    throw new Error(
+      data.error || `정답 가능성 계산 요청에 실패했습니다. 상태 코드: ${response.status}`
+    );
   }
 
   return data;
@@ -124,6 +436,9 @@ async function saveConversationLog({ studentInputText, probabilityResult }) {
     problemText: currentProblemText,
 
     turnNumber: currentHistoryCount + 1,
+
+    initialConfidencePercent: currentInitialConfidencePercent,
+    finalAnswerText: currentFinalAnswerText,
 
     studentLog: studentInputText,
     studentInput: studentInputText,
@@ -180,6 +495,8 @@ function renderHistory(items) {
     .map((item, index) => {
       const turnNumber = item.turnNumber || index + 1;
       const probability = item.probabilityPercent ?? 0;
+      const confidence = item.initialConfidencePercent;
+      const finalAnswer = item.finalAnswerText;
       const createdAtText = formatDateTime(item.createdAtLocal);
 
       return `
@@ -190,6 +507,16 @@ function renderHistory(items) {
           </div>
 
           <p class="student-log">${escapeHtml(item.studentLog || item.studentInput || "")}</p>
+          ${
+            Number.isInteger(confidence)
+              ? `<p>초기 자신감: <strong>${confidence}</strong> / 100</p>`
+              : ""
+          }
+          ${
+            typeof finalAnswer === "string" && finalAnswer.trim()
+              ? `<p>최종 정답: <strong>${escapeHtml(finalAnswer)}</strong></p>`
+              : ""
+          }
           <p>정답 가능성: <strong>${probability}</strong> / 100</p>
         </article>
       `;
@@ -227,6 +554,12 @@ async function handleSolutionSubmit(event) {
   event.preventDefault();
 
   const inputText = studentInput.value.trim();
+
+  if (currentInitialConfidencePercent === null) {
+    showSubmitMessage("먼저 문제를 풀 자신감을 입력하고 저장해 주세요.", "error");
+    initialConfidenceInput.focus();
+    return;
+  }
 
   if (!inputText) {
     showSubmitMessage("풀이를 입력해 주세요.", "error");
@@ -289,10 +622,15 @@ async function initPage() {
 
   studentNicknameText.textContent = currentStudentSession.studentNickname;
 
+  setGaugeValue(0);
+
   await loadProblem();
+  await loadStudentProblemState();
   listenToHistory();
 }
 
+confidenceForm.addEventListener("submit", handleConfidenceSubmit);
+answerForm.addEventListener("submit", handleAnswerSubmit);
 solutionForm.addEventListener("submit", handleSolutionSubmit);
 historyButton.addEventListener("click", openHistoryDrawer);
 closeHistoryButton.addEventListener("click", closeHistoryDrawer);

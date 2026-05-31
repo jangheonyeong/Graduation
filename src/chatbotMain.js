@@ -495,8 +495,6 @@ function renderHistory(items) {
     .map((item, index) => {
       const turnNumber = item.turnNumber || index + 1;
       const probability = item.probabilityPercent ?? 0;
-      const confidence = item.initialConfidencePercent;
-      const finalAnswer = item.finalAnswerText;
       const createdAtText = formatDateTime(item.createdAtLocal);
 
       return `
@@ -507,16 +505,6 @@ function renderHistory(items) {
           </div>
 
           <p class="student-log">${escapeHtml(item.studentLog || item.studentInput || "")}</p>
-          ${
-            Number.isInteger(confidence)
-              ? `<p>초기 자신감: <strong>${confidence}</strong> / 100</p>`
-              : ""
-          }
-          ${
-            typeof finalAnswer === "string" && finalAnswer.trim()
-              ? `<p>최종 정답: <strong>${escapeHtml(finalAnswer)}</strong></p>`
-              : ""
-          }
           <p>정답 가능성: <strong>${probability}</strong> / 100</p>
         </article>
       `;

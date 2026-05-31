@@ -137,8 +137,10 @@ input {
 }
 
 .probability-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .panel-header h2,
@@ -353,9 +355,13 @@ textarea:focus {
 
 .probability-gauge {
   --probability-fill: 0%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 280px;
   height: 280px;
-  margin: 70px auto 0;
+  margin: 0;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -486,13 +492,12 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
-  .solution-panel,
-  .probability-panel {
+  .solution-panel {
     min-height: auto;
   }
 
-  .probability-gauge {
-    margin-top: 30px;
+  .probability-panel {
+    min-height: 460px;
   }
 }
 
